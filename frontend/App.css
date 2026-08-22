@@ -1,0 +1,50 @@
+/* frontend/src/App.css */
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: #f5f7fb;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px 40px;
+  background: white;
+}
+
+.dashboard {
+  padding: 40px;
+}
+
+.welcome {
+  margin-bottom: 30px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.card {
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+}
+
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.timeline div {
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+}
