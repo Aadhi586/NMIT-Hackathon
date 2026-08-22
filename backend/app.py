@@ -5,9 +5,7 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-# =========================================================
-# EMPLOYEES
-# =========================================================
+
 
 employees = [
     {
@@ -215,7 +213,7 @@ def get_leave_balance(employee_id):
 
 
 
-<<<<<<< HEAD
+
 @app.route(
     "/api/leave/apply",
     methods=["POST"]
