@@ -1,23 +1,52 @@
 import { useState } from "react";
 import "./AskDayflow.css";
 
+const API_URL =
+  "http://localhost:5000";
+
 const employeeId = 1;
 
 function AskDayflow() {
 
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] =
+    useState("");
 
-  const [messages, setMessages] = useState([
-    {
-      sender: "dayflow",
-      text: "Hi! I'm Dayflow 🤖. Ask me about attendance, leave, or your workday."
-    }
-  ]);
+  const [messages, setMessages] =
+    useState([
+      {
+        sender: "dayflow",
+        text:
+          "Hi! I'm Dayflow 🤖. I can help you understand your HR information."
+      }
+    ]);
+
+  const [thinking, setThinking] =
+    useState(false);
 
 
-  // -----------------------------
+  // =====================================================
+  // ADD MESSAGE
+  // =====================================================
+
+  const addMessage = (
+    sender,
+    text
+  ) => {
+
+    setMessages(previous => [
+      ...previous,
+      {
+        sender,
+        text
+      }
+    ]);
+
+  };
+
+
+  // =====================================================
   // ASK DAYFLOW
-  // -----------------------------
+  // =====================================================
 
   const askDayflow = async () => {
 
@@ -28,187 +57,239 @@ function AskDayflow() {
     const userQuestion =
       question.trim();
 
-    setMessages(previous => [
-      ...previous,
-      {
-        sender: "user",
-        text: userQuestion
-      }
-    ]);
+    addMessage(
+      "user",
+      userQuestion
+    );
 
     setQuestion("");
 
-
-    // -----------------------------
-    // BASIC INTELLIGENCE
-    // -----------------------------
-
-    let answer =
-      "I can currently help with attendance, leave balance, and check-in questions.";
+    setThinking(true);
 
 
-    const text =
-      userQuestion.toLowerCase();
+    let answer = "";
 
 
-    // LEAVE
+    try {
 
-    if (
-      text.includes("leave") ||
-      text.includes("holiday")
-    ) {
+      const text =
+        userQuestion.toLowerCase();
 
-      try {
+
+      // -----------------------------------------------
+      // LEAVE
+      // -----------------------------------------------
+
+      if (
+        text.includes("leave") ||
+        text.includes("holiday")
+      ) {
 
         const response =
           await fetch(
-            `http://localhost:5000/api/leave/${employeeId}`
+            `${API_URL}/api/leave/${employeeId}`
           );
 
         const data =
           await response.json();
 
-        answer =
-          `You currently have ${data.leave_balance} leave days remaining. 🌴`;
 
-      } catch {
+        if (
+          text.includes("balance") ||
+          text.includes("days")
+        ) {
 
-        answer =
-          "I couldn't retrieve your leave balance right now.";
+          answer =
+            `You currently have ${data.leave_balance} leave days available. 🌴`;
+
+        } else {
+
+          answer =
+            `Your current leave balance is ${data.leave_balance} days. You can apply for leave from your Employee Dashboard.`;
+
+        }
 
       }
 
-    }
 
+      // -----------------------------------------------
+      // ATTENDANCE
+      // -----------------------------------------------
 
-    // ATTENDANCE
-
-    else if (
-      text.includes("attendance") ||
-      text.includes("present")
-    ) {
-
-      try {
+      else if (
+        text.includes("attendance") ||
+        text.includes("present") ||
+        text.includes("working")
+      ) {
 
         const response =
           await fetch(
-            `http://localhost:5000/api/attendance/${employeeId}`
+            `${API_URL}/api/attendance/${employeeId}`
           );
 
         const data =
           await response.json();
+
 
         if (data.length === 0) {
 
           answer =
-            "You don't have any attendance records yet today.";
+            "You don't have any attendance records yet.";
 
         } else {
 
           const latest =
             data[data.length - 1];
 
-          if (latest.check_out) {
+
+          if (
+            latest.check_in &&
+            !latest.check_out
+          ) {
 
             answer =
-              "You've completed your latest work session. Great work today! 🌆";
+              "You're currently checked in and your workday is active. 🟢";
 
           } else {
 
             answer =
-              "You're currently checked in and your workday is active. 🟢";
+              "Your latest attendance session has been completed. 🌆";
 
           }
 
         }
 
-      } catch {
+      }
+
+
+      // -----------------------------------------------
+      // CHECK IN
+      // -----------------------------------------------
+
+      else if (
+        text.includes("check in") ||
+        text.includes("check-in")
+      ) {
 
         answer =
-          "I couldn't retrieve your attendance information.";
+          "You can check in from your Employee Dashboard. Click the Check In button when you start working. 🟢";
 
       }
 
-    }
 
+      // -----------------------------------------------
+      // CHECK OUT
+      // -----------------------------------------------
 
-    // CHECK IN
+      else if (
+        text.includes("check out") ||
+        text.includes("check-out")
+      ) {
 
-    else if (
-      text.includes("check in") ||
-      text.includes("check-in")
-    ) {
+        answer =
+          "When your workday is complete, use the Check Out button on your Employee Dashboard. 🌆";
 
-      answer =
-        "You can check in from your Employee Dashboard. Just click the Check In button. 🟢";
-
-    }
-
-
-    // CHECK OUT
-
-    else if (
-      text.includes("check out") ||
-      text.includes("check-out")
-    ) {
-
-      answer =
-        "When you're finished for the day, use the Check Out button on your dashboard. 🌆";
-
-    }
-
-
-    // HELLO
-
-    else if (
-      text.includes("hello") ||
-      text.includes("hi") ||
-      text.includes("hey")
-    ) {
-
-      answer =
-        "Hello! 👋 How can I help with your Dayflow today?";
-
-    }
-
-
-    // DEFAULT
-
-    else {
-
-      answer =
-        "I'm still learning! Try asking me about your leave balance, attendance, check-in, or check-out.";
-
-    }
-
-
-    setMessages(previous => [
-      ...previous,
-      {
-        sender: "dayflow",
-        text: answer
       }
-    ]);
+
+
+      // -----------------------------------------------
+      // LEAVE APPLICATION
+      // -----------------------------------------------
+
+      else if (
+        text.includes("apply") &&
+        text.includes("leave")
+      ) {
+
+        answer =
+          "To apply for leave, open the Leave tab on your Employee Dashboard, select your leave type and dates, then submit your request. 🌴";
+
+      }
+
+
+      // -----------------------------------------------
+      // HELP
+      // -----------------------------------------------
+
+      else if (
+        text.includes("help") ||
+        text.includes("what can you do")
+      ) {
+
+        answer =
+          "I can currently help with your leave balance, attendance, check-in, check-out, and leave application process. 🤖";
+
+      }
+
+
+      // -----------------------------------------------
+      // GREETING
+      // -----------------------------------------------
+
+      else if (
+        text.includes("hello") ||
+        text.includes("hi") ||
+        text.includes("hey")
+      ) {
+
+        answer =
+          "Hello! 👋 What would you like to know about your workday?";
+
+      }
+
+
+      // -----------------------------------------------
+      // UNKNOWN
+      // -----------------------------------------------
+
+      else {
+
+        answer =
+          "I'm still learning that area. Try asking about your leave balance, attendance, check-in, or leave application.";
+
+      }
+
+
+    } catch {
+
+      answer =
+        "I couldn't connect to the Dayflow HR system right now. Please try again.";
+
+    }
+
+
+    setThinking(false);
+
+
+    addMessage(
+      "dayflow",
+      answer
+    );
 
   };
 
 
-  // -----------------------------
-  // ENTER KEY
-  // -----------------------------
+  // =====================================================
+  // ENTER
+  // =====================================================
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown =
+    event => {
 
-    if (event.key === "Enter") {
-      askDayflow();
-    }
+      if (
+        event.key === "Enter"
+      ) {
 
-  };
+        askDayflow();
+
+      }
+
+    };
 
 
-  // -----------------------------
+  // =====================================================
   // UI
-  // -----------------------------
+  // =====================================================
 
   return (
 
@@ -248,14 +329,20 @@ function AskDayflow() {
 
             <div
               key={index}
-              className={`chat-message ${message.sender}`}
+              className={
+                `chat-message ${message.sender}`
+              }
             >
 
-              {message.sender === "dayflow" && (
+              {message.sender ===
+                "dayflow" && (
+
                 <div className="message-avatar">
                   🤖
                 </div>
+
               )}
+
 
               <div className="message-bubble">
 
@@ -268,6 +355,27 @@ function AskDayflow() {
           )
         )}
 
+
+        {thinking && (
+
+          <div className="chat-message dayflow">
+
+            <div className="message-avatar">
+              🤖
+            </div>
+
+            <div className="thinking">
+
+              <span></span>
+              <span></span>
+              <span></span>
+
+            </div>
+
+          </div>
+
+        )}
+
       </div>
 
 
@@ -276,24 +384,39 @@ function AskDayflow() {
       <div className="chat-input">
 
         <input
+
           type="text"
+
           value={question}
+
           onChange={
             event =>
-              setQuestion(event.target.value)
+              setQuestion(
+                event.target.value
+              )
           }
-          onKeyDown={handleKeyDown}
-          placeholder="Ask about leave, attendance..."
+
+          onKeyDown={
+            handleKeyDown
+          }
+
+          placeholder=
+            "Ask about leave, attendance..."
+
         />
 
-        <button onClick={askDayflow}>
+        <button
+          onClick={
+            askDayflow
+          }
+        >
           Ask →
         </button>
 
       </div>
 
 
-      {/* SUGGESTIONS */}
+      {/* QUICK QUESTIONS */}
 
       <div className="suggestions">
 
@@ -304,7 +427,7 @@ function AskDayflow() {
             )
           }
         >
-          🌴 My leave balance
+          🌴 Leave balance
         </button>
 
         <button
@@ -314,7 +437,17 @@ function AskDayflow() {
             )
           }
         >
-          📊 My attendance
+          📊 Attendance
+        </button>
+
+        <button
+          onClick={() =>
+            setQuestion(
+              "How do I apply for leave?"
+            )
+          }
+        >
+          📝 Apply for leave
         </button>
 
         <button
@@ -324,7 +457,7 @@ function AskDayflow() {
             )
           }
         >
-          🟢 How do I check in?
+          🟢 Check in
         </button>
 
       </div>
