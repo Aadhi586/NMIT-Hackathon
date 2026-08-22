@@ -357,13 +357,6 @@ if __name__ == "__main__":
     print("")
 
     app.run(
-=======
-print("================================")
-print("       DAYFLOW HR SYSTEM")
-print("================================")
-print("Backend running on port 5000")
-print("================================")
-app.run(
         host="0.0.0.0",
         port=5000,
         debug=True
