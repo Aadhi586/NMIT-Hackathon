@@ -234,6 +234,7 @@ def get_leave_balance(employee_id):
 # APPLY FOR LEAVE
 # =========================================================
 
+<<<<<<< HEAD
 @app.route(
     "/api/leave/apply",
     methods=["POST"]
@@ -387,6 +388,14 @@ if __name__ == "__main__":
     print("")
 
     app.run(
+=======
+print("================================")
+print("       DAYFLOW HR SYSTEM")
+print("================================")
+print("Backend running on port 5000")
+print("================================")
+app.run(
+>>>>>>> 10c8d9840cbc4a7a6661100649080c48ff0f1fbb
         host="0.0.0.0",
         port=5000,
         debug=True
