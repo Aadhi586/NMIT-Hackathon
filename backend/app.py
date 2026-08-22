@@ -201,9 +201,10 @@ def get_leave_balance(employee_id):
 # -----------------------------
 
 print("================================")
-print("       DAYFLOW HR SYSTEM"
+print("       DAYFLOW HR SYSTEM")
 print("================================")
-print("Backend running on port 5000")print("================================")
+print("Backend running on port 5000")
+print("================================")
 app.run(
         host="0.0.0.0",
         port=5000,
