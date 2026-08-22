@@ -1,22 +1,30 @@
 .ask-dayflow {
   max-width: 850px;
+
   margin: 50px auto;
+
   padding: 35px;
 
   background: white;
 
-  border: 1px solid #e8ebf0;
+  border:
+    1px solid #e8ebf0;
 
   border-radius: 25px;
 
-  font-family: Inter, Arial, sans-serif;
+  font-family:
+    Inter,
+    Arial,
+    sans-serif;
 
   color: #18202f;
 }
 
 .ai-header {
   display: flex;
+
   align-items: center;
+
   gap: 18px;
 
   margin-bottom: 30px;
@@ -27,6 +35,7 @@
   height: 60px;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
@@ -36,28 +45,35 @@
 
   font-size: 30px;
 
-  animation: float 3s ease-in-out infinite;
+  animation:
+    float 3s ease-in-out infinite;
 }
 
 .eyebrow {
   font-size: 10px;
+
   font-weight: 700;
+
   letter-spacing: 1.5px;
+
   color: #7c8493;
 }
 
 .ai-header h1 {
   margin: 5px 0;
+
   font-size: 30px;
 }
 
 .ai-header p {
   margin: 0;
+
   color: #7c8493;
 }
 
 .chat {
   min-height: 350px;
+
   max-height: 450px;
 
   overflow-y: auto;
@@ -69,6 +85,7 @@
   border-radius: 18px;
 
   display: flex;
+
   flex-direction: column;
 
   gap: 18px;
@@ -76,7 +93,9 @@
 
 .chat-message {
   display: flex;
+
   gap: 10px;
+
   align-items: flex-end;
 }
 
@@ -93,6 +112,7 @@
   background: white;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 }
@@ -109,12 +129,15 @@
   line-height: 1.5;
 }
 
-.chat-message.dayflow .message-bubble {
+.chat-message.dayflow
+.message-bubble {
   background: white;
 }
 
-.chat-message.user .message-bubble {
+.chat-message.user
+.message-bubble {
   background: #18202f;
+
   color: white;
 }
 
@@ -131,9 +154,10 @@
 
   padding: 15px;
 
-  border-radius: 12px;
+  border:
+    1px solid #dfe3e9;
 
-  border: 1px solid #dfe3e9;
+  border-radius: 12px;
 
   outline: none;
 
@@ -156,6 +180,8 @@
   color: white;
 
   font-weight: 700;
+
+  cursor: pointer;
 }
 
 .suggestions {
@@ -169,7 +195,8 @@
 }
 
 .suggestions button {
-  border: 1px solid #e2e6ec;
+  border:
+    1px solid #e2e6ec;
 
   background: white;
 
@@ -180,21 +207,78 @@
   font-size: 12px;
 
   cursor: pointer;
+
+  transition:
+    transform 0.2s ease;
 }
 
 .suggestions button:hover {
-  background: #f5f7fa;
+  transform:
+    translateY(-2px);
+}
+
+.thinking {
+  display: flex;
+
+  gap: 4px;
+
+  padding: 14px 18px;
+
+  background: white;
+
+  border-radius: 15px;
+}
+
+.thinking span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #7c8493;
+
+  animation:
+    typing 1s infinite;
+}
+
+.thinking span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.thinking span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing {
+
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+
+    opacity: 0.4;
+  }
+
+  30% {
+    transform:
+      translateY(-5px);
+
+    opacity: 1;
+  }
+
 }
 
 @keyframes float {
 
   0%,
   100% {
-    transform: translateY(0);
+    transform:
+      translateY(0);
   }
 
   50% {
-    transform: translateY(-6px);
+    transform:
+      translateY(-6px);
   }
 
 }
@@ -203,6 +287,7 @@
 
   .ask-dayflow {
     margin: 20px;
+
     padding: 20px;
   }
 
