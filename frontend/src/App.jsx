@@ -1,1345 +1,2018 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import Login from "./Login";
+
+import TeamPulse from "../../analytics/TeamPulse";
+import AskDayFlow from "../../ai/AskDayFlow";
+
 import "./App.css";
 
 const API_URL = "http://localhost:5000";
+
 const EMPLOYEE_ID = 1;
 
+
+/* =========================================================
+   APP
+========================================================= */
+
 function App() {
-  const [employee, setEmployee] = useState(null);
-  const [leaveBalance, setLeaveBalance] = useState(0);
-  const [attendance, setAttendance] = useState([]);
-  const [leaveRequests, setLeaveRequests] = useState([]);
 
-  const [checkedIn, setCheckedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [session, setSession] = useState(() => {
 
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  const [message, setMessage] = useState("");
-
-  const [leaveType, setLeaveType] = useState("Casual");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [reason, setReason] = useState("");
-
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-
-  /* =====================================================
-     CLOCK
-  ===================================================== */
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-
-  /* =====================================================
-     DATA
-  ===================================================== */
-
-  const loadData = async () => {
     try {
-      const [
-        employeeResponse,
-        leaveResponse,
-        attendanceResponse,
-        requestsResponse
-      ] = await Promise.all([
-        fetch(`${API_URL}/api/employees/${EMPLOYEE_ID}`),
-        fetch(`${API_URL}/api/leave/${EMPLOYEE_ID}`),
-        fetch(`${API_URL}/api/attendance/${EMPLOYEE_ID}`),
-        fetch(`${API_URL}/api/leave/requests/${EMPLOYEE_ID}`)
-      ]);
 
-      const employeeData = await employeeResponse.json();
-      const leaveData = await leaveResponse.json();
-      const attendanceData = await attendanceResponse.json();
-      const requestData = await requestsResponse.json();
+      const saved =
+        localStorage.getItem(
+          "dayflow_session"
+        );
 
-      setEmployee(employeeData);
-      setLeaveBalance(leaveData.leave_balance);
-      setAttendance(attendanceData);
-      setLeaveRequests(requestData);
+      return saved
+        ? JSON.parse(saved)
+        : null;
 
-      const active = attendanceData.some(
-        record => record.check_in && !record.check_out
+    } catch {
+
+      return null;
+
+    }
+
+  });
+
+
+  const [page, setPage] =
+    useState("dashboard");
+
+
+  /* =======================================================
+     LOGIN
+  ======================================================= */
+
+  const handleLogin = (user) => {
+
+    setSession(user);
+
+    setPage(
+      user.role === "employee"
+        ? "dashboard"
+        : user.role === "hr"
+          ? "pulse"
+          : "admin"
+    );
+
+  };
+
+
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
+
+  const handleLogout = () => {
+
+    localStorage.removeItem(
+      "dayflow_session"
+    );
+
+    setSession(null);
+
+    setPage("dashboard");
+
+  };
+
+
+  /* =======================================================
+     AUTH GUARD
+  ======================================================= */
+
+  if (!session) {
+
+    return (
+      <Login
+        onLogin={handleLogin}
+      />
+    );
+
+  }
+
+
+  /* =======================================================
+     EMPLOYEE
+  ======================================================= */
+
+  if (session.role === "employee") {
+
+    return (
+      <EmployeeApp
+        session={session}
+        page={page}
+        setPage={setPage}
+        onLogout={handleLogout}
+      />
+    );
+
+  }
+
+
+  /* =======================================================
+     HR
+  ======================================================= */
+
+  if (session.role === "hr") {
+
+    return (
+      <HRApp
+        session={session}
+        page={page}
+        setPage={setPage}
+        onLogout={handleLogout}
+      />
+    );
+
+  }
+
+
+  /* =======================================================
+     ADMIN
+  ======================================================= */
+
+  return (
+    <AdminApp
+      session={session}
+      page={page}
+      setPage={setPage}
+      onLogout={handleLogout}
+    />
+  );
+
+}
+
+
+/* =========================================================
+   EMPLOYEE APP
+========================================================= */
+
+function EmployeeApp({
+  session,
+  page,
+  setPage,
+  onLogout
+}) {
+
+  return (
+
+    <div className="dayflow-app">
+
+      <Sidebar
+        role="employee"
+        page={page}
+        setPage={setPage}
+        session={session}
+        onLogout={onLogout}
+      />
+
+      <main className="dayflow-main">
+
+        {page === "dashboard" && (
+          <EmployeeDashboard
+            session={session}
+            setPage={setPage}
+          />
+        )}
+
+        {page === "attendance" && (
+          <AttendancePage
+            employeeId={EMPLOYEE_ID}
+          />
+        )}
+
+        {page === "leave" && (
+          <LeavePage
+            employeeId={EMPLOYEE_ID}
+          />
+        )}
+
+        {page === "ask" && (
+          <AskDayFlow />
+        )}
+
+        {page === "profile" && (
+          <ProfilePage
+            session={session}
+          />
+        )}
+
+      </main>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   HR APP
+========================================================= */
+
+function HRApp({
+  session,
+  page,
+  setPage,
+  onLogout
+}) {
+
+  return (
+
+    <div className="dayflow-app">
+
+      <Sidebar
+        role="hr"
+        page={page}
+        setPage={setPage}
+        session={session}
+        onLogout={onLogout}
+      />
+
+      <main className="dayflow-main">
+
+        {page === "pulse" && (
+          <TeamPulse />
+        )}
+
+        {page === "employees" && (
+          <EmployeeManagement />
+        )}
+
+        {page === "requests" && (
+          <TeamPulse />
+        )}
+
+        {page === "ask" && (
+          <AskDayFlow />
+        )}
+
+      </main>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   ADMIN APP
+========================================================= */
+
+function AdminApp({
+  session,
+  page,
+  setPage,
+  onLogout
+}) {
+
+  return (
+
+    <div className="dayflow-app">
+
+      <Sidebar
+        role="admin"
+        page={page}
+        setPage={setPage}
+        session={session}
+        onLogout={onLogout}
+      />
+
+      <main className="dayflow-main">
+
+        {page === "admin" && (
+          <AdminDashboard />
+        )}
+
+        {page === "employees" && (
+          <EmployeeManagement />
+        )}
+
+        {page === "analytics" && (
+          <TeamPulse />
+        )}
+
+        {page === "ask" && (
+          <AskDayFlow />
+        )}
+
+        {page === "system" && (
+          <SystemStatus />
+        )}
+
+      </main>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+function Sidebar({
+  role,
+  page,
+  setPage,
+  session,
+  onLogout
+}) {
+
+  const employeeItems = [
+    {
+      id: "dashboard",
+      icon: "⌂",
+      label: "My Day"
+    },
+    {
+      id: "attendance",
+      icon: "◷",
+      label: "Attendance"
+    },
+    {
+      id: "leave",
+      icon: "◇",
+      label: "Leave"
+    },
+    {
+      id: "ask",
+      icon: "✦",
+      label: "Ask Dayflow"
+    },
+    {
+      id: "profile",
+      icon: "○",
+      label: "Profile"
+    }
+  ];
+
+
+  const hrItems = [
+    {
+      id: "pulse",
+      icon: "◉",
+      label: "Workforce Pulse"
+    },
+    {
+      id: "employees",
+      icon: "○",
+      label: "Employees"
+    },
+    {
+      id: "requests",
+      icon: "◇",
+      label: "Leave Requests"
+    },
+    {
+      id: "ask",
+      icon: "✦",
+      label: "Ask Dayflow"
+    }
+  ];
+
+
+  const adminItems = [
+    {
+      id: "admin",
+      icon: "⌂",
+      label: "Command Center"
+    },
+    {
+      id: "employees",
+      icon: "○",
+      label: "Employees"
+    },
+    {
+      id: "analytics",
+      icon: "◉",
+      label: "Analytics"
+    },
+    {
+      id: "system",
+      icon: "⚙",
+      label: "System"
+    },
+    {
+      id: "ask",
+      icon: "✦",
+      label: "Ask Dayflow"
+    }
+  ];
+
+
+  const items =
+    role === "employee"
+      ? employeeItems
+      : role === "hr"
+        ? hrItems
+        : adminItems;
+
+
+  return (
+
+    <aside className="dayflow-sidebar">
+
+      <div className="sidebar-brand">
+
+        <div className="sidebar-logo">
+          ✦
+        </div>
+
+        <div>
+
+          <strong>
+            DAYFLOW
+          </strong>
+
+          <span>
+            {role === "employee"
+              ? "EMPLOYEE"
+              : role === "hr"
+                ? "HR COMMAND"
+                : "ADMIN CORE"}
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div className="sidebar-section">
+
+        <span className="sidebar-section-label">
+          WORKSPACE
+        </span>
+
+        <nav>
+
+          {items.map(item => (
+
+            <button
+              key={item.id}
+              className={
+                page === item.id
+                  ? "nav-item active"
+                  : "nav-item"
+              }
+              onClick={() =>
+                setPage(item.id)
+              }
+            >
+
+              <span className="nav-icon">
+                {item.icon}
+              </span>
+
+              <span>
+                {item.label}
+              </span>
+
+              {page === item.id && (
+                <i />
+              )}
+
+            </button>
+
+          ))}
+
+        </nav>
+
+      </div>
+
+
+      <div className="sidebar-bottom">
+
+        <div className="sidebar-user">
+
+          <div className="sidebar-avatar">
+
+            {session.name
+              ?.charAt(0)
+              ?.toUpperCase()}
+
+          </div>
+
+          <div>
+
+            <strong>
+              {session.name}
+            </strong>
+
+            <span>
+              {session.email}
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <button
+          className="logout-button"
+          onClick={onLogout}
+        >
+
+          <span>
+            ↪
+          </span>
+
+          Sign out
+
+        </button>
+
+      </div>
+
+    </aside>
+
+  );
+
+}
+
+
+/* =========================================================
+   EMPLOYEE DASHBOARD
+========================================================= */
+
+function EmployeeDashboard({
+  session,
+  setPage
+}) {
+
+  const [data, setData] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [working, setWorking] =
+    useState(false);
+
+
+  const loadDashboard = async () => {
+
+    try {
+
+      const response =
+        await fetch(
+          `${API_URL}/api/dashboard/${EMPLOYEE_ID}`
+        );
+
+      const result =
+        await response.json();
+
+      setData(result);
+
+      setWorking(
+        result.currently_working
       );
-
-      setCheckedIn(active);
 
     } catch (error) {
-      setMessage(
-        "Unable to connect to Dayflow backend."
+
+      console.error(
+        "Dashboard error:",
+        error
       );
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
 
   useEffect(() => {
-    loadData();
+
+    loadDashboard();
+
+    const timer =
+      setInterval(
+        loadDashboard,
+        5000
+      );
+
+    return () =>
+      clearInterval(timer);
+
   }, []);
 
 
-  /* =====================================================
-     AUTO CLEAR MESSAGE
-  ===================================================== */
-
-  useEffect(() => {
-    if (!message) return;
-
-    const timer = setTimeout(() => {
-      setMessage("");
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, [message]);
-
-
-  /* =====================================================
-     ATTENDANCE
-  ===================================================== */
-
   const handleAttendance = async () => {
-    setActionLoading(true);
+
+    const endpoint =
+      working
+        ? "check-out"
+        : "check-in";
+
 
     try {
-      const endpoint = checkedIn
-        ? "/api/attendance/check-out"
-        : "/api/attendance/check-in";
 
-      const response = await fetch(
-        `${API_URL}${endpoint}`,
+      await fetch(
+        `${API_URL}/api/attendance/${endpoint}`,
         {
           method: "POST",
+
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json"
           },
+
           body: JSON.stringify({
-            employee_id: EMPLOYEE_ID
+            employee_id:
+              EMPLOYEE_ID
           })
         }
       );
 
-      const data = await response.json();
+      await loadDashboard();
 
-      if (!response.ok) {
-        setMessage(data.error || "Something went wrong.");
-        return;
-      }
+    } catch (error) {
 
-      setMessage(
-        checkedIn
-          ? "Your day has been completed. See you tomorrow! 🌆"
-          : "You're checked in. Let's make it a great day! 🚀"
-      );
+      console.error(error);
 
-      await loadData();
-
-    } catch {
-      setMessage(
-        "Could not reach the Dayflow server."
-      );
-    } finally {
-      setActionLoading(false);
     }
+
   };
 
 
-  /* =====================================================
-     LEAVE
-  ===================================================== */
+  if (loading) {
 
-  const applyLeave = async event => {
-    event.preventDefault();
+    return (
+      <div className="dashboard-loading">
 
-    if (!startDate || !endDate || !reason.trim()) {
-      setMessage(
-        "Please complete all leave details."
-      );
-      return;
-    }
+        <div className="dashboard-loader" />
 
-    setActionLoading(true);
+        <p>
+          Preparing your workspace...
+        </p>
+
+      </div>
+    );
+
+  }
+
+
+  return (
+
+    <div className="employee-dashboard">
+
+      <header className="dashboard-header">
+
+        <div>
+
+          <span className="dashboard-kicker">
+            {getGreeting()}
+          </span>
+
+          <h1>
+            {session.name}.
+          </h1>
+
+          <p>
+            Your workday, beautifully organized.
+          </p>
+
+        </div>
+
+        <div className="dashboard-date">
+
+          <span>
+            TODAY
+          </span>
+
+          <strong>
+            {new Date().toLocaleDateString(
+              "en-IN",
+              {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+              }
+            )}
+          </strong>
+
+        </div>
+
+      </header>
+
+
+      <section className="employee-hero">
+
+        <div>
+
+          <span className="dashboard-kicker">
+            YOUR DAY
+          </span>
+
+          <h2>
+            {working
+              ? "You're in flow."
+              : "Ready when you are."}
+          </h2>
+
+          <p>
+
+            {working
+              ? "Your workday is currently active."
+              : "Start your day and let Dayflow take care of the rest."}
+
+          </p>
+
+        </div>
+
+
+        <button
+          className={
+            working
+              ? "day-action working"
+              : "day-action"
+          }
+          onClick={handleAttendance}
+        >
+
+          <span>
+            {working ? "●" : "▶"}
+          </span>
+
+          {working
+            ? "Finish Day"
+            : "Start My Day"}
+
+        </button>
+
+      </section>
+
+
+      <section className="employee-stats">
+
+        <DashboardStat
+          icon="◷"
+          label="ATTENDANCE"
+          value={
+            data?.attendance?.length || 0
+          }
+          detail="Work sessions"
+        />
+
+        <DashboardStat
+          icon="◇"
+          label="LEAVE BALANCE"
+          value={
+            data?.leave_balance || 0
+          }
+          detail="Days available"
+        />
+
+        <DashboardStat
+          icon="✦"
+          label="NOTIFICATIONS"
+          value={
+            data?.notifications?.filter(
+              notification =>
+                !notification.read
+            ).length || 0
+          }
+          detail="Unread updates"
+        />
+
+      </section>
+
+
+      <section className="dashboard-grid">
+
+        <div className="dashboard-card">
+
+          <div className="card-title">
+
+            <div>
+
+              <span>
+                QUICK ACTIONS
+              </span>
+
+              <h3>
+                Keep things moving
+              </h3>
+
+            </div>
+
+          </div>
+
+
+          <div className="quick-grid">
+
+            <button
+              onClick={() =>
+                setPage("leave")
+              }
+            >
+
+              <span>
+                ◇
+              </span>
+
+              <strong>
+                Request leave
+              </strong>
+
+              <small>
+                Plan your time off
+              </small>
+
+            </button>
+
+
+            <button
+              onClick={() =>
+                setPage("attendance")
+              }
+            >
+
+              <span>
+                ◷
+              </span>
+
+              <strong>
+                View attendance
+              </strong>
+
+              <small>
+                See your work sessions
+              </small>
+
+            </button>
+
+
+            <button
+              onClick={() =>
+                setPage("ask")
+              }
+            >
+
+              <span>
+                ✦
+              </span>
+
+              <strong>
+                Ask Dayflow
+              </strong>
+
+              <small>
+                Get instant answers
+              </small>
+
+            </button>
+
+
+            <button
+              onClick={() =>
+                setPage("profile")
+              }
+            >
+
+              <span>
+                ○
+              </span>
+
+              <strong>
+                My profile
+              </strong>
+
+              <small>
+                View your information
+              </small>
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div className="dashboard-card">
+
+          <div className="card-title">
+
+            <div>
+
+              <span>
+                LATEST
+              </span>
+
+              <h3>
+                Activity
+              </h3>
+
+            </div>
+
+          </div>
+
+
+          <div className="activity-list">
+
+            {data?.notifications
+              ?.slice()
+              .reverse()
+              .slice(0, 4)
+              .map(notification => (
+
+                <div
+                  className="activity-item"
+                  key={notification.id}
+                >
+
+                  <div>
+                    ✓
+                  </div>
+
+                  <span>
+                    <strong>
+                      {notification.title}
+                    </strong>
+
+                    {notification.message}
+
+                  </span>
+
+                </div>
+
+              ))}
+
+
+            {(!data?.notifications ||
+              data.notifications.length === 0) && (
+
+              <div className="empty-activity">
+
+                <span>
+                  ✦
+                </span>
+
+                <p>
+                  Your Dayflow activity
+                  will appear here.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   ATTENDANCE
+========================================================= */
+
+function AttendancePage({
+  employeeId
+}) {
+
+  const [records, setRecords] =
+    useState([]);
+
+  const load = async () => {
 
     try {
-      const response = await fetch(
+
+      const response =
+        await fetch(
+          `${API_URL}/api/attendance/${employeeId}`
+        );
+
+      const data =
+        await response.json();
+
+      setRecords(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  };
+
+
+  useEffect(() => {
+
+    load();
+
+  }, []);
+
+
+  return (
+
+    <div className="simple-page">
+
+      <PageHeader
+        kicker="YOUR WORKDAY"
+        title="Attendance"
+        subtitle="A clear view of your work sessions."
+      />
+
+
+      <div className="record-card">
+
+        {records.length === 0 ? (
+
+          <EmptyState
+            icon="◷"
+            title="No attendance yet"
+            text="Your work sessions will appear here."
+          />
+
+        ) : (
+
+          records
+            .slice()
+            .reverse()
+            .map(record => (
+
+              <div
+                className="attendance-row"
+                key={record.id}
+              >
+
+                <div className="record-icon">
+                  ◷
+                </div>
+
+                <div>
+
+                  <strong>
+                    {record.date}
+                  </strong>
+
+                  <span>
+                    Started{" "}
+                    {formatTime(
+                      record.check_in
+                    )}
+                  </span>
+
+                </div>
+
+                <div className="record-end">
+
+                  {record.check_out
+                    ? `Finished ${formatTime(
+                        record.check_out
+                      )}`
+                    : "Currently active"}
+
+                </div>
+
+              </div>
+
+            ))
+
+        )}
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   LEAVE
+========================================================= */
+
+function LeavePage({
+  employeeId
+}) {
+
+  const [requests, setRequests] =
+    useState([]);
+
+  const [balance, setBalance] =
+    useState(0);
+
+  const [showForm, setShowForm] =
+    useState(false);
+
+  const [form, setForm] =
+    useState({
+      leave_type: "Casual Leave",
+      start_date: "",
+      end_date: "",
+      reason: ""
+    });
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+
+  const load = async () => {
+
+    try {
+
+      const [
+        balanceResponse,
+        requestResponse
+      ] = await Promise.all([
+
+        fetch(
+          `${API_URL}/api/leave/${employeeId}`
+        ),
+
+        fetch(
+          `${API_URL}/api/leave/requests/${employeeId}`
+        )
+
+      ]);
+
+
+      const balanceData =
+        await balanceResponse.json();
+
+      const requestData =
+        await requestResponse.json();
+
+
+      setBalance(
+        balanceData.leave_balance || 0
+      );
+
+      setRequests(
+        Array.isArray(requestData)
+          ? requestData
+          : []
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  };
+
+
+  useEffect(() => {
+
+    load();
+
+  }, []);
+
+
+  const submit = async event => {
+
+    event.preventDefault();
+
+    setSubmitting(true);
+
+
+    try {
+
+      await fetch(
         `${API_URL}/api/leave/apply`,
         {
           method: "POST",
+
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json"
           },
+
           body: JSON.stringify({
-            employee_id: EMPLOYEE_ID,
-            leave_type: leaveType,
-            start_date: startDate,
-            end_date: endDate,
-            reason
+            employee_id:
+              employeeId,
+            ...form
           })
         }
       );
 
-      const data = await response.json();
 
-      if (!response.ok) {
-        setMessage(data.error);
-        return;
-      }
+      setForm({
+        leave_type: "Casual Leave",
+        start_date: "",
+        end_date: "",
+        reason: ""
+      });
 
-      setMessage(
-        "Leave request sent to HR. 🌴"
-      );
+      setShowForm(false);
 
-      setStartDate("");
-      setEndDate("");
-      setReason("");
+      await load();
 
-      await loadData();
+    } catch (error) {
 
-    } catch {
-      setMessage(
-        "Unable to submit leave request."
-      );
+      console.error(error);
+
     } finally {
-      setActionLoading(false);
+
+      setSubmitting(false);
+
     }
+
   };
 
 
-  /* =====================================================
-     COMPUTED DATA
-  ===================================================== */
+  return (
 
-  const completedDays = useMemo(() => {
-    return attendance.filter(
-      record => record.check_in && record.check_out
-    ).length;
-  }, [attendance]);
+    <div className="simple-page">
 
-
-  const pendingLeaves = useMemo(() => {
-    return leaveRequests.filter(
-      request => request.status === "Pending"
-    ).length;
-  }, [leaveRequests]);
+      <PageHeader
+        kicker="TIME OFF"
+        title="Leave Center"
+        subtitle="Plan your time away without the paperwork."
+      />
 
 
-  const latestAttendance = attendance.length
-    ? attendance[attendance.length - 1]
-    : null;
+      <div className="leave-balance-card">
+
+        <div>
+
+          <span>
+            AVAILABLE LEAVE
+          </span>
+
+          <strong>
+            {balance}
+          </strong>
+
+          <p>
+            days remaining
+          </p>
+
+        </div>
+
+        <button
+          onClick={() =>
+            setShowForm(!showForm)
+          }
+        >
+          + Request leave
+        </button>
+
+      </div>
 
 
-  const formattedTime = currentTime.toLocaleTimeString(
-    [],
+      {showForm && (
+
+        <form
+          className="leave-form"
+          onSubmit={submit}
+        >
+
+          <h3>
+            New leave request
+          </h3>
+
+
+          <label>
+            Leave type
+          </label>
+
+          <select
+            value={form.leave_type}
+            onChange={event =>
+              setForm({
+                ...form,
+                leave_type:
+                  event.target.value
+              })
+            }
+          >
+
+            <option>
+              Casual Leave
+            </option>
+
+            <option>
+              Sick Leave
+            </option>
+
+            <option>
+              Earned Leave
+            </option>
+
+          </select>
+
+
+          <div className="date-grid">
+
+            <div>
+
+              <label>
+                Start date
+              </label>
+
+              <input
+                type="date"
+                value={form.start_date}
+                onChange={event =>
+                  setForm({
+                    ...form,
+                    start_date:
+                      event.target.value
+                  })
+                }
+                required
+              />
+
+            </div>
+
+
+            <div>
+
+              <label>
+                End date
+              </label>
+
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={event =>
+                  setForm({
+                    ...form,
+                    end_date:
+                      event.target.value
+                  })
+                }
+                required
+              />
+
+            </div>
+
+          </div>
+
+
+          <label>
+            Reason
+          </label>
+
+          <textarea
+            value={form.reason}
+            onChange={event =>
+              setForm({
+                ...form,
+                reason:
+                  event.target.value
+              })
+            }
+            placeholder="Tell HR why you need leave..."
+            required
+          />
+
+
+          <button
+            className="primary-action"
+            disabled={submitting}
+          >
+            {submitting
+              ? "Submitting..."
+              : "Submit request →"}
+          </button>
+
+        </form>
+
+      )}
+
+
+      <div className="record-card">
+
+        <div className="section-heading">
+
+          <span>
+            REQUEST HISTORY
+          </span>
+
+          <strong>
+            {requests.length}
+          </strong>
+
+        </div>
+
+
+        {requests.length === 0 ? (
+
+          <EmptyState
+            icon="◇"
+            title="No requests"
+            text="Your leave history will appear here."
+          />
+
+        ) : (
+
+          requests
+            .slice()
+            .reverse()
+            .map(request => (
+
+              <div
+                className="leave-history-row"
+                key={request.id}
+              >
+
+                <div>
+
+                  <strong>
+                    {request.leave_type}
+                  </strong>
+
+                  <span>
+                    {request.start_date}
+                    {" → "}
+                    {request.end_date}
+                  </span>
+
+                </div>
+
+                <span
+                  className={
+                    `request-badge ${
+                      request.status.toLowerCase()
+                    }`
+                  }
+                >
+                  {request.status}
+                </span>
+
+              </div>
+
+            ))
+
+        )}
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+function ProfilePage({
+  session
+}) {
+
+  return (
+
+    <div className="simple-page">
+
+      <PageHeader
+        kicker="IDENTITY"
+        title="My Profile"
+        subtitle="Your Dayflow employee information."
+      />
+
+
+      <div className="profile-card">
+
+        <div className="large-avatar">
+
+          {session.name
+            ?.charAt(0)
+            ?.toUpperCase()}
+
+        </div>
+
+        <h2>
+          {session.name}
+        </h2>
+
+        <p>
+          {session.email}
+        </p>
+
+
+        <div className="profile-details">
+
+          <div>
+            <span>
+              ROLE
+            </span>
+
+            <strong>
+              Employee
+            </strong>
+          </div>
+
+          <div>
+            <span>
+              STATUS
+            </span>
+
+            <strong>
+              Active
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   HR EMPLOYEE MANAGEMENT
+========================================================= */
+
+function EmployeeManagement() {
+
+  const [employees, setEmployees] =
+    useState([]);
+
+  useEffect(() => {
+
+    fetch(
+      `${API_URL}/api/employees`
+    )
+      .then(response =>
+        response.json()
+      )
+      .then(data =>
+        setEmployees(
+          data.employees || []
+        )
+      )
+      .catch(console.error);
+
+  }, []);
+
+
+  return (
+
+    <div className="simple-page">
+
+      <PageHeader
+        kicker="PEOPLE"
+        title="Employee Directory"
+        subtitle="Your organization's people at a glance."
+      />
+
+
+      <div className="admin-employee-grid">
+
+        {employees.map(employee => (
+
+          <div
+            className="admin-employee-card"
+            key={employee.id}
+          >
+
+            <div className="large-avatar small">
+
+              {employee.name
+                ?.charAt(0)
+                ?.toUpperCase()}
+
+            </div>
+
+            <div>
+
+              <strong>
+                {employee.name}
+              </strong>
+
+              <span>
+                {employee.role}
+              </span>
+
+              <small>
+                {employee.department}
+              </small>
+
+            </div>
+
+            <i>
+              ●
+            </i>
+
+          </div>
+
+        ))}
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+
+function AdminDashboard() {
+
+  const [analytics, setAnalytics] =
+    useState(null);
+
+  useEffect(() => {
+
+    fetch(
+      `${API_URL}/api/hr/analytics`
+    )
+      .then(response =>
+        response.json()
+      )
+      .then(data =>
+        setAnalytics(data)
+      )
+      .catch(console.error);
+
+  }, []);
+
+
+  return (
+
+    <div className="admin-dashboard">
+
+      <PageHeader
+        kicker="DAYFLOW ADMIN CORE"
+        title="Command Center"
+        subtitle="System-wide visibility for your organization."
+      />
+
+
+      <div className="admin-metrics">
+
+        <AdminMetric
+          icon="○"
+          label="EMPLOYEES"
+          value={
+            analytics?.total_employees ??
+            "—"
+          }
+        />
+
+        <AdminMetric
+          icon="◉"
+          label="ACTIVE NOW"
+          value={
+            analytics?.currently_working ??
+            "—"
+          }
+        />
+
+        <AdminMetric
+          icon="◇"
+          label="PENDING"
+          value={
+            analytics?.pending_leave ??
+            "—"
+          }
+        />
+
+        <AdminMetric
+          icon="✦"
+          label="ACTIVITY"
+          value={
+            analytics
+              ? `${analytics.activity_rate}%`
+              : "—"
+          }
+        />
+
+      </div>
+
+
+      <div className="admin-command-grid">
+
+        <div className="admin-system-card">
+
+          <span className="dashboard-kicker">
+            SYSTEM HEALTH
+          </span>
+
+          <h2>
+            Everything is flowing.
+          </h2>
+
+          <SystemRow
+            name="Dayflow API"
+            status="ONLINE"
+          />
+
+          <SystemRow
+            name="Authentication"
+            status="ONLINE"
+          />
+
+          <SystemRow
+            name="Notifications"
+            status="ONLINE"
+          />
+
+          <SystemRow
+            name="Analytics Engine"
+            status="ONLINE"
+          />
+
+        </div>
+
+
+        <div className="admin-system-card">
+
+          <span className="dashboard-kicker">
+            ADMIN INSIGHT
+          </span>
+
+          <div className="admin-insight-icon">
+            ✦
+          </div>
+
+          <h2>
+            Your organization is connected.
+          </h2>
+
+          <p>
+            Dayflow is bringing attendance,
+            leave, people and HR workflows
+            into one unified workspace.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   SYSTEM STATUS
+========================================================= */
+
+function SystemStatus() {
+
+  return (
+
+    <div className="simple-page">
+
+      <PageHeader
+        kicker="ADMIN / SYSTEM"
+        title="System Status"
+        subtitle="Monitor the core Dayflow services."
+      />
+
+
+      <div className="system-status-card">
+
+        <SystemRow
+          name="API"
+          status="ONLINE"
+        />
+
+        <SystemRow
+          name="Authentication"
+          status="ONLINE"
+        />
+
+        <SystemRow
+          name="Attendance Service"
+          status="ONLINE"
+        />
+
+        <SystemRow
+          name="Leave Service"
+          status="ONLINE"
+        />
+
+        <SystemRow
+          name="Notification Service"
+          status="ONLINE"
+        />
+
+        <SystemRow
+          name="Analytics"
+          status="ONLINE"
+        />
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+/* =========================================================
+   SMALL COMPONENTS
+========================================================= */
+
+function DashboardStat({
+  icon,
+  label,
+  value,
+  detail
+}) {
+
+  return (
+
+    <div className="employee-stat">
+
+      <div className="stat-icon">
+        {icon}
+      </div>
+
+      <span>
+        {label}
+      </span>
+
+      <strong>
+        {value}
+      </strong>
+
+      <small>
+        {detail}
+      </small>
+
+    </div>
+
+  );
+
+}
+
+
+function AdminMetric({
+  icon,
+  label,
+  value
+}) {
+
+  return (
+
+    <div className="admin-metric">
+
+      <span>
+        {icon}
+      </span>
+
+      <small>
+        {label}
+      </small>
+
+      <strong>
+        {value}
+      </strong>
+
+    </div>
+
+  );
+
+}
+
+
+function SystemRow({
+  name,
+  status
+}) {
+
+  return (
+
+    <div className="system-row">
+
+      <span>
+        {name}
+      </span>
+
+      <strong>
+        <i />
+        {status}
+      </strong>
+
+    </div>
+
+  );
+
+}
+
+
+function PageHeader({
+  kicker,
+  title,
+  subtitle
+}) {
+
+  return (
+
+    <header className="simple-header">
+
+      <span className="dashboard-kicker">
+        {kicker}
+      </span>
+
+      <h1>
+        {title}
+      </h1>
+
+      <p>
+        {subtitle}
+      </p>
+
+    </header>
+
+  );
+
+}
+
+
+function EmptyState({
+  icon,
+  title,
+  text
+}) {
+
+  return (
+
+    <div className="empty-state">
+
+      <div>
+        {icon}
+      </div>
+
+      <h3>
+        {title}
+      </h3>
+
+      <p>
+        {text}
+      </p>
+
+    </div>
+
+  );
+
+}
+
+
+function formatTime(value) {
+
+  if (!value) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleTimeString(
+    "en-IN",
     {
       hour: "2-digit",
       minute: "2-digit"
     }
   );
 
-
-  const formattedDate = currentTime.toLocaleDateString(
-    [],
-    {
-      weekday: "long",
-      month: "long",
-      day: "numeric"
-    }
-  );
-
-
-  /* =====================================================
-     GREETING
-  ===================================================== */
-
-  const hour = currentTime.getHours();
-
-  const greeting =
-    hour < 12
-      ? "Good morning"
-      : hour < 17
-        ? "Good afternoon"
-        : "Good evening";
-
-
-  /* =====================================================
-     LOADING
-  ===================================================== */
-
-  if (loading || !employee) {
-    return (
-      <div className="boot-screen">
-
-        <div className="boot-orbit">
-          <div></div>
-        </div>
-
-        <div className="boot-title">
-          DAYFLOW
-        </div>
-
-        <div className="boot-subtitle">
-          Initializing your workspace...
-        </div>
-
-      </div>
-    );
-  }
-
-
-  /* =====================================================
-     UI
-  ===================================================== */
-
-  return (
-    <div className="dayflow-app">
-
-      {/* BACKGROUND MOTION */}
-
-      <div className="ambient ambient-one"></div>
-      <div className="ambient ambient-two"></div>
-      <div className="ambient ambient-three"></div>
-
-
-      {/* =================================================
-         SIDEBAR
-      ================================================= */}
-
-      <aside className="sidebar">
-
-        <div className="brand">
-
-          <div className="brand-mark">
-            <span>D</span>
-          </div>
-
-          <div>
-            <strong>Dayflow</strong>
-            <small>People OS</small>
-          </div>
-
-        </div>
-
-
-        <nav className="navigation">
-
-          <button
-            className={
-              activeTab === "overview"
-                ? "nav-item active"
-                : "nav-item"
-            }
-            onClick={() => setActiveTab("overview")}
-          >
-            <span>⌂</span>
-            <label>Overview</label>
-          </button>
-
-
-          <button
-            className={
-              activeTab === "attendance"
-                ? "nav-item active"
-                : "nav-item"
-            }
-            onClick={() => setActiveTab("attendance")}
-          >
-            <span>◷</span>
-            <label>Attendance</label>
-          </button>
-
-
-          <button
-            className={
-              activeTab === "leave"
-                ? "nav-item active"
-                : "nav-item"
-            }
-            onClick={() => setActiveTab("leave")}
-          >
-            <span>◇</span>
-            <label>Leave</label>
-          </button>
-
-        </nav>
-
-
-        <div className="sidebar-bottom">
-
-          <div className="sidebar-status">
-            <span></span>
-            <div>
-              <strong>Dayflow Online</strong>
-              <small>All systems operational</small>
-            </div>
-          </div>
-
-        </div>
-
-      </aside>
-
-
-      {/* =================================================
-         MAIN
-      ================================================= */}
-
-      <main className="main-content">
-
-        {/* TOPBAR */}
-
-        <header className="topbar">
-
-          <div>
-
-            <span className="date-label">
-              {formattedDate}
-            </span>
-
-            <span className="live-clock">
-              {formattedTime}
-            </span>
-
-          </div>
-
-
-          <div className="top-actions">
-
-            <button
-              className="icon-button"
-              type="button"
-              title="Notifications"
-            >
-              ◌
-              {pendingLeaves > 0 && (
-                <i></i>
-              )}
-            </button>
-
-
-            <div className="user-chip">
-
-              <div className="user-avatar">
-                {employee.name.charAt(0)}
-              </div>
-
-              <div className="user-info">
-
-                <strong>
-                  {employee.name}
-                </strong>
-
-                <span>
-                  {employee.role}
-                </span>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </header>
-
-
-        {/* =================================================
-           TOAST
-        ================================================= */}
-
-        {message && (
-
-          <div
-            className="toast"
-            role="status"
-            aria-live="polite"
-          >
-
-            <div className="toast-icon">
-              ✓
-            </div>
-
-            <span>
-              {message}
-            </span>
-
-          </div>
-
-        )}
-
-
-        {/* =================================================
-           HERO
-        ================================================= */}
-
-        <section className="hero">
-
-          <div className="hero-copy">
-
-            <span className="section-kicker">
-              YOUR PERSONAL FLOW
-            </span>
-
-            <h1>
-              {greeting},{" "}
-              <span>
-                {employee.name.split(" ")[0]}
-              </span>.
-            </h1>
-
-            <p>
-              Everything you need for your workday,
-              flowing in one place.
-            </p>
-
-          </div>
-
-
-          <div className="hero-status">
-
-            <div
-              className={
-                checkedIn
-                  ? "pulse-ring working"
-                  : "pulse-ring"
-              }
-            >
-              <div>
-                {checkedIn ? "ON" : "OFF"}
-              </div>
-            </div>
-
-            <div>
-
-              <strong>
-                {checkedIn
-                  ? "You're in flow"
-                  : "Ready when you are"}
-              </strong>
-
-              <span>
-                {checkedIn
-                  ? "Your workday is active"
-                  : "Start your Dayflow"}
-              </span>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* =================================================
-           OVERVIEW
-        ================================================= */}
-
-        {activeTab === "overview" && (
-
-          <div className="page-enter">
-
-
-            {/* METRICS */}
-
-            <section className="metric-grid">
-
-
-              <div className="metric-card featured">
-
-                <div className="metric-top">
-
-                  <span>
-                    TODAY
-                  </span>
-
-                  <div className="metric-symbol">
-                    ◷
-                  </div>
-
-                </div>
-
-                <strong>
-                  {checkedIn
-                    ? "In Flow"
-                    : "Not Started"}
-                </strong>
-
-                <p>
-                  {checkedIn
-                    ? "Your workday is currently active."
-                    : "Check in to begin tracking your day."}
-                </p>
-
-
-                <button
-                  className={
-                    checkedIn
-                      ? "flow-button stop"
-                      : "flow-button"
-                  }
-                  onClick={handleAttendance}
-                  disabled={actionLoading}
-                >
-
-                  <span>
-                    {actionLoading
-                      ? "Processing..."
-                      : checkedIn
-                        ? "Finish Day"
-                        : "Start My Day"}
-                  </span>
-
-                  <b>
-                    →
-                  </b>
-
-                </button>
-
-              </div>
-
-
-              <div className="metric-card">
-
-                <div className="metric-top">
-
-                  <span>
-                    LEAVE BALANCE
-                  </span>
-
-                  <div className="metric-symbol">
-                    ◇
-                  </div>
-
-                </div>
-
-                <strong>
-                  {leaveBalance}
-                  <small> days</small>
-                </strong>
-
-                <p>
-                  Available this year
-                </p>
-
-                <div className="mini-progress">
-
-                  <span
-                    style={{
-                      width:
-                        `${Math.min(
-                          leaveBalance * 10,
-                          100
-                        )}%`
-                    }}
-                  ></span>
-
-                </div>
-
-              </div>
-
-
-              <div className="metric-card">
-
-                <div className="metric-top">
-
-                  <span>
-                    WORK SESSIONS
-                  </span>
-
-                  <div className="metric-symbol">
-                    ✦
-                  </div>
-
-                </div>
-
-                <strong>
-                  {completedDays}
-                </strong>
-
-                <p>
-                  Completed sessions
-                </p>
-
-                <div className="sparkline">
-
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-
-                </div>
-
-              </div>
-
-
-              <div className="metric-card">
-
-                <div className="metric-top">
-
-                  <span>
-                    REQUESTS
-                  </span>
-
-                  <div className="metric-symbol">
-                    ◎
-                  </div>
-
-                </div>
-
-                <strong>
-                  {leaveRequests.length}
-                </strong>
-
-                <p>
-                  {pendingLeaves > 0
-                    ? `${pendingLeaves} awaiting HR review`
-                    : "No requests waiting"}
-                </p>
-
-              </div>
-
-            </section>
-
-
-            {/* FLOW */}
-
-            <section className="flow-card">
-
-              <div className="flow-heading">
-
-                <div>
-
-                  <span className="section-kicker">
-                    LIVE WORKDAY
-                  </span>
-
-                  <h2>
-                    Your Dayflow
-                  </h2>
-
-                </div>
-
-                <div className="flow-live">
-                  <span></span>
-                  Live
-                </div>
-
-              </div>
-
-
-              <div className="flow-track">
-
-                <div
-                  className={
-                    "flow-progress " +
-                    (checkedIn
-                      ? "flow-progress-active"
-                      : "")
-                  }
-                ></div>
-
-
-                <FlowStep
-                  icon="☀"
-                  title="Start"
-                  description="Your day begins"
-                  active
-                />
-
-                <FlowStep
-                  icon="↗"
-                  title="Check in"
-                  description={
-                    checkedIn
-                      ? "You're here"
-                      : "Waiting"
-                  }
-                  active={checkedIn}
-                />
-
-                <FlowStep
-                  icon="✦"
-                  title="In flow"
-                  description={
-                    checkedIn
-                      ? "Workday active"
-                      : "Not started"
-                  }
-                  active={checkedIn}
-                />
-
-                <FlowStep
-                  icon="○"
-                  title="Complete"
-                  description="Finish your day"
-                />
-
-              </div>
-
-            </section>
-
-
-            {/* INSIGHT + PROFILE */}
-
-            <section className="bottom-grid">
-
-
-              <div className="insight-card">
-
-                <div className="insight-orb">
-                  ✦
-                </div>
-
-                <div>
-
-                  <span className="section-kicker">
-                    DAYFLOW INTELLIGENCE
-                  </span>
-
-                  <h3>
-                    {checkedIn
-                      ? "You're in the flow."
-                      : "Your next step is simple."}
-                  </h3>
-
-                  <p>
-                    {checkedIn
-                      ? "Your attendance is active. Keep your momentum going."
-                      : "Start your day with one click and let Dayflow handle the rest."}
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              <div className="profile-card">
-
-                <div className="profile-card-head">
-
-                  <span className="section-kicker">
-                    YOUR PROFILE
-                  </span>
-
-                  <div className="profile-avatar-large">
-                    {employee.name.charAt(0)}
-                  </div>
-
-                </div>
-
-                <h3>
-                  {employee.name}
-                </h3>
-
-                <p>
-                  {employee.role}
-                </p>
-
-                <div className="profile-meta">
-
-                  <span>
-                    {employee.department}
-                  </span>
-
-                  <span>
-                    Active
-                  </span>
-
-                </div>
-
-              </div>
-
-            </section>
-
-          </div>
-
-        )}
-
-
-        {/* =================================================
-           ATTENDANCE
-        ================================================= */}
-
-        {activeTab === "attendance" && (
-
-          <section className="page-enter">
-
-            <div className="page-heading">
-
-              <div>
-
-                <span className="section-kicker">
-                  WORK HISTORY
-                </span>
-
-                <h2>
-                  Attendance
-                </h2>
-
-                <p>
-                  Your workday, captured in motion.
-                </p>
-
-              </div>
-
-              <div className="heading-stat">
-
-                <strong>
-                  {completedDays}
-                </strong>
-
-                <span>
-                  completed sessions
-                </span>
-
-              </div>
-
-            </div>
-
-
-            <div className="history-card">
-
-              {attendance.length === 0 ? (
-
-                <div className="empty-state">
-
-                  <div>
-                    ◷
-                  </div>
-
-                  <h3>
-                    Your journey starts here
-                  </h3>
-
-                  <p>
-                    Check in to create your first
-                    attendance record.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                <div className="history-list">
-
-                  {attendance
-                    .slice()
-                    .reverse()
-                    .map((record, index) => (
-
-                      <div
-                        className="history-row"
-                        key={record.id}
-                        style={{
-                          animationDelay:
-                            `${index * 70}ms`
-                        }}
-                      >
-
-                        <div className="history-date">
-
-                          <strong>
-                            {record.date}
-                          </strong>
-
-                          <span>
-                            Work session
-                          </span>
-
-                        </div>
-
-
-                        <div className="history-time">
-
-                          <span>
-                            IN
-                          </span>
-
-                          <strong>
-                            {new Date(
-                              record.check_in
-                            ).toLocaleTimeString(
-                              [],
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              }
-                            )}
-                          </strong>
-
-                        </div>
-
-
-                        <div className="history-time">
-
-                          <span>
-                            OUT
-                          </span>
-
-                          <strong>
-                            {record.check_out
-                              ? new Date(
-                                  record.check_out
-                                ).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit"
-                                  }
-                                )
-                              : "—"}
-                          </strong>
-
-                        </div>
-
-
-                        <div>
-
-                          <span
-                            className={
-                              record.check_out
-                                ? "status-pill complete"
-                                : "status-pill active"
-                            }
-                          >
-
-                            {record.check_out
-                              ? "Completed"
-                              : "In progress"}
-
-                          </span>
-
-                        </div>
-
-                      </div>
-
-                    ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-          </section>
-
-        )}
-
-
-        {/* =================================================
-           LEAVE
-        ================================================= */}
-
-        {activeTab === "leave" && (
-
-          <section className="page-enter">
-
-            <div className="page-heading">
-
-              <div>
-
-                <span className="section-kicker">
-                  TIME OFF
-                </span>
-
-                <h2>
-                  Leave Center
-                </h2>
-
-                <p>
-                  Plan your time without the paperwork.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div className="leave-layout">
-
-
-              {/* FORM */}
-
-              <form
-                className="leave-form"
-                onSubmit={applyLeave}
-              >
-
-                <div className="form-header">
-
-                  <div className="form-orb">
-                    ◇
-                  </div>
-
-                  <div>
-
-                    <h3>
-                      Request time off
-                    </h3>
-
-                    <p>
-                      You have{" "}
-                      <strong>
-                        {leaveBalance} days
-                      </strong>{" "}
-                      available.
-                    </p>
-
-                  </div>
-
-                </div>
-
-
-                <label>
-                  Leave type
-
-                  <select
-                    value={leaveType}
-                    onChange={e =>
-                      setLeaveType(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option>
-                      Casual
-                    </option>
-
-                    <option>
-                      Sick
-                    </option>
-
-                    <option>
-                      Annual
-                    </option>
-
-                  </select>
-
-                </label>
-
-
-                <div className="date-grid">
-
-                  <label>
-                    Start date
-
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={e =>
-                        setStartDate(
-                          e.target.value
-                        )
-                      }
-                    />
-
-                  </label>
-
-
-                  <label>
-                    End date
-
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={e =>
-                        setEndDate(
-                          e.target.value
-                        )
-                      }
-                    />
-
-                  </label>
-
-                </div>
-
-
-                <label>
-                  Reason
-
-                  <textarea
-                    value={reason}
-                    onChange={e =>
-                      setReason(
-                        e.target.value
-                      )
-                    }
-                    placeholder=
-                      "What's the occasion?"
-                  />
-
-                </label>
-
-
-                <button
-                  className="submit-leave"
-                  type="submit"
-                  disabled={actionLoading}
-                >
-
-                  {actionLoading
-                    ? "Sending..."
-                    : "Send request"}
-
-                  <span>
-                    →
-                  </span>
-
-                </button>
-
-              </form>
-
-
-              {/* REQUESTS */}
-
-              <div className="requests-card">
-
-                <div className="requests-header">
-
-                  <div>
-
-                    <span className="section-kicker">
-                      HISTORY
-                    </span>
-
-                    <h3>
-                      Your requests
-                    </h3>
-
-                  </div>
-
-                  <span>
-                    {leaveRequests.length}
-                  </span>
-
-                </div>
-
-
-                {leaveRequests.length === 0 ? (
-
-                  <div className="empty-small">
-
-                    <div>
-                      ◌
-                    </div>
-
-                    <p>
-                      No leave requests yet.
-                    </p>
-
-                  </div>
-
-                ) : (
-
-                  <div className="request-list">
-
-                    {leaveRequests
-                      .slice()
-                      .reverse()
-                      .map((request, index) => (
-
-                        <div
-                          className="request-item"
-                          key={request.id}
-                          style={{
-                            animationDelay:
-                              `${index * 80}ms`
-                          }}
-                        >
-
-                          <div className="request-icon">
-                            ◇
-                          </div>
-
-                          <div className="request-info">
-
-                            <strong>
-                              {request.leave_type}
-                            </strong>
-
-                            <span>
-                              {request.start_date}
-                              {" → "}
-                              {request.end_date}
-                            </span>
-
-                          </div>
-
-                          <span
-                            className={
-                              "status-pill " +
-                              request.status.toLowerCase()
-                            }
-                          >
-                            {request.status}
-                          </span>
-
-                        </div>
-
-                      ))}
-
-                  </div>
-
-                )}
-
-              </div>
-
-            </div>
-
-          </section>
-
-        )}
-
-      </main>
-
-    </div>
-  );
 }
 
 
-/* =======================================================
-   FLOW STEP
-======================================================= */
+function getGreeting() {
 
-function FlowStep({
-  icon,
-  title,
-  description,
-  active = false
-}) {
-  return (
-    <div
-      className={
-        active
-          ? "flow-step active"
-          : "flow-step"
-      }
-    >
+  const hour =
+    new Date().getHours();
 
-      <div className="flow-node">
-        {icon}
-      </div>
+  if (hour < 12) {
+    return "GOOD MORNING";
+  }
 
-      <strong>
-        {title}
-      </strong>
+  if (hour < 17) {
+    return "GOOD AFTERNOON";
+  }
 
-      <span>
-        {description}
-      </span>
+  return "GOOD EVENING";
 
-    </div>
-  );
 }
 
 
