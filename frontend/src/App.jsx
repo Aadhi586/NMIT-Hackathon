@@ -1,556 +1,475 @@
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Inter, Arial, sans-serif;
-  background: #f5f7fb;
-  color: #18202f;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
-
-/* -----------------------------
-   HEADER
------------------------------ */
+import { useEffect, useState } from "react";
+import "./App.css";
 
-.header {
-  height: 82px;
-  background: white;
-  border-bottom: 1px solid #e8ebf0;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 0 42px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-icon {
-  width: 42px;
-  height: 42px;
-
-  border-radius: 13px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: #18202f;
-  color: white;
-
-  font-size: 20px;
-  font-weight: 800;
-}
+const API_URL = "http://localhost:5000";
 
-.logo h1 {
-  margin: 0;
-  font-size: 21px;
-}
+function App() {
 
-.logo span {
-  font-size: 11px;
-  color: #7c8493;
-}
+  const employeeId = 1;
 
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+  const [employee, setEmployee] = useState(null);
+  const [leaveBalance, setLeaveBalance] = useState(0);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
-.profile strong {
-  display: block;
-  font-size: 14px;
-}
+  // -----------------------------
+  // LOAD EMPLOYEE
+  // -----------------------------
 
-.profile small {
-  color: #7c8493;
-}
+  useEffect(() => {
 
-.avatar {
-  width: 38px;
-  height: 38px;
+    fetch(`${API_URL}/api/employees/${employeeId}`)
+      .then(response => response.json())
+      .then(data => {
+        setEmployee(data);
+      })
+      .catch(() => {
+        setMessage("Unable to connect to Dayflow backend.");
+      });
 
-  border-radius: 50%;
+    fetch(`${API_URL}/api/leave/${employeeId}`)
+      .then(response => response.json())
+      .then(data => {
+        setLeaveBalance(data.leave_balance);
+      })
+      .catch(() => {
+        setLeaveBalance(0);
+      });
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    setLoading(false);
 
-  background: #e9eef7;
+  }, []);
 
-  font-weight: 700;
-}
 
+  // -----------------------------
+  // CHECK IN
+  // -----------------------------
 
-/* -----------------------------
-   DASHBOARD
------------------------------ */
+  const handleCheckIn = async () => {
 
-.dashboard {
-  max-width: 1200px;
-  margin: auto;
-  padding: 45px 30px;
-}
+    setMessage("");
 
+    try {
 
-/* -----------------------------
-   WELCOME
------------------------------ */
+      const response = await fetch(
+        `${API_URL}/api/attendance/check-in`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            employee_id: employeeId
+          })
+        }
+      );
 
-.welcome {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+      const data = await response.json();
 
-  margin-bottom: 30px;
-}
+      if (!response.ok) {
+        setMessage(data.error);
+        return;
+      }
 
-.eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #7c8493;
-}
+      setCheckedIn(true);
+      setMessage("You're checked in. Have a productive day! 🚀");
 
-.welcome h2 {
-  font-size: 32px;
-  margin: 8px 0;
-}
+    } catch (error) {
 
-.welcome p {
-  color: #7c8493;
-  margin: 0;
-}
+      setMessage(
+        "Backend connection failed. Make sure Dayflow server is running."
+      );
 
-.status-badge {
-  background: white;
-  padding: 12px 18px;
-  border-radius: 30px;
+    }
+  };
 
-  border: 1px solid #e8ebf0;
 
-  font-size: 13px;
-}
+  // -----------------------------
+  // CHECK OUT
+  // -----------------------------
 
-.status-dot {
-  display: inline-block;
+  const handleCheckOut = async () => {
 
-  width: 8px;
-  height: 8px;
+    setMessage("");
 
-  border-radius: 50%;
+    try {
 
-  background: #b5bcc8;
+      const response = await fetch(
+        `${API_URL}/api/attendance/check-out`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            employee_id: employeeId
+          })
+        }
+      );
 
-  margin-right: 8px;
-}
+      const data = await response.json();
 
-.status-dot.active {
-  background: #36b37e;
-}
+      if (!response.ok) {
+        setMessage(data.error);
+        return;
+      }
 
+      setCheckedIn(false);
+      setMessage("Checked out successfully. See you tomorrow! 👋");
 
-/* -----------------------------
-   MESSAGE
------------------------------ */
+    } catch (error) {
 
-.message {
-  background: white;
+      setMessage("Unable to connect to Dayflow backend.");
 
-  border: 1px solid #e8ebf0;
+    }
+  };
 
-  border-radius: 12px;
 
-  padding: 14px 18px;
+  // -----------------------------
+  // LOADING
+  // -----------------------------
 
-  margin-bottom: 22px;
+  if (loading || !employee) {
 
-  animation: slideDown 0.4s ease;
-}
-
-
-/* -----------------------------
-   CARDS
------------------------------ */
-
-.cards {
-  display: grid;
-
-  grid-template-columns:
-    repeat(3, 1fr);
-
-  gap: 20px;
-
-  margin-bottom: 30px;
-}
-
-.card {
-  background: white;
-
-  border: 1px solid #e8ebf0;
-
-  border-radius: 20px;
-
-  padding: 25px;
-
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-
-  box-shadow:
-    0 12px 35px rgba(20, 30, 50, 0.08);
-}
-
-.card-icon {
-  font-size: 25px;
-
-  margin-bottom: 18px;
-}
-
-.card span {
-  color: #7c8493;
-  font-size: 13px;
-}
-
-.card h3 {
-  font-size: 27px;
-  margin: 10px 0;
-}
-
-.card h3 small {
-  font-size: 14px;
-  font-weight: normal;
-}
-
-.card p {
-  margin: 0;
-  color: #8b93a1;
-  font-size: 13px;
-}
-
-
-/* -----------------------------
-   BUTTONS
------------------------------ */
-
-.checkin-button,
-.checkout-button {
-  width: 100%;
-
-  border: none;
-
-  padding: 12px;
-
-  border-radius: 10px;
-
-  font-weight: 700;
-
-  margin-top: 12px;
-
-  transition: transform 0.2s ease;
-}
-
-.checkin-button {
-  background: #18202f;
-  color: white;
-}
-
-.checkout-button {
-  background: #eceff4;
-  color: #18202f;
-}
-
-.checkin-button:hover,
-.checkout-button:hover {
-  transform: scale(1.02);
-}
-
-
-/* -----------------------------
-   DAYFLOW
------------------------------ */
-
-.flow-section {
-  background: white;
-
-  border: 1px solid #e8ebf0;
-
-  border-radius: 22px;
-
-  padding: 30px;
-
-  margin-bottom: 25px;
-}
-
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.section-heading h2 {
-  margin: 8px 0 0;
-}
-
-.section-heading > span {
-  font-size: 12px;
-
-  padding: 7px 12px;
-
-  border-radius: 20px;
-
-  background: #edf8f3;
-}
-
-
-/* -----------------------------
-   TIMELINE
------------------------------ */
-
-.timeline {
-  position: relative;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(4, 1fr);
-
-  gap: 15px;
-
-  margin-top: 40px;
-}
-
-.timeline-line {
-  position: absolute;
-
-  top: 27px;
-
-  left: 40px;
-
-  right: 40px;
-
-  height: 2px;
-
-  background: #e5e9ef;
-
-  z-index: 0;
-}
-
-.timeline-item {
-  position: relative;
-
-  z-index: 1;
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-
-  text-align: center;
-
-  gap: 10px;
-
-  color: #9aa2af;
-
-  transition:
-    transform 0.4s ease,
-    color 0.4s ease;
-}
-
-.timeline-item.active {
-  color: #18202f;
-
-  transform: translateY(-5px);
-}
-
-.timeline-icon {
-  width: 55px;
-  height: 55px;
-
-  background: #f2f4f7;
-
-  border: 4px solid white;
-
-  border-radius: 50%;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  font-size: 20px;
-
-  transition:
-    transform 0.4s ease;
-}
-
-.timeline-item.active .timeline-icon {
-  transform: scale(1.08);
-}
-
-.timeline-item strong {
-  font-size: 14px;
-}
-
-.timeline-item p {
-  font-size: 12px;
-
-  margin: 4px 0 0;
-
-  color: #8b93a1;
-}
-
-
-/* -----------------------------
-   INSIGHT
------------------------------ */
-
-.insight {
-  display: flex;
-
-  align-items: center;
-
-  gap: 18px;
-
-  background: white;
-
-  border: 1px solid #e8ebf0;
-
-  border-radius: 20px;
-
-  padding: 24px;
-}
-
-.insight-icon {
-  font-size: 30px;
-}
-
-.insight span {
-  font-size: 10px;
-
-  font-weight: 700;
-
-  letter-spacing: 1.3px;
-
-  color: #7c8493;
-}
-
-.insight h3 {
-  margin: 5px 0;
-}
-
-.insight p {
-  margin: 0;
-
-  color: #7c8493;
-}
-
-
-/* -----------------------------
-   LOADING
------------------------------ */
-
-.loading {
-  min-height: 100vh;
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-
-  justify-content: center;
-}
-
-.loader {
-  width: 42px;
-  height: 42px;
-
-  border-radius: 50%;
-
-  border: 4px solid #e5e9ef;
-
-  border-top-color: #18202f;
-
-  animation: spin 0.8s linear infinite;
-}
-
-
-/* -----------------------------
-   ANIMATIONS
------------------------------ */
-
-@keyframes spin {
-
-  to {
-    transform: rotate(360deg);
+    return (
+      <div className="loading">
+        <div className="loader"></div>
+        <h2>Loading Dayflow...</h2>
+      </div>
+    );
   }
 
+
+  // -----------------------------
+  // DASHBOARD
+  // -----------------------------
+
+  return (
+
+    <div className="app">
+
+      {/* HEADER */}
+
+      <header className="header">
+
+        <div className="logo">
+
+          <div className="logo-icon">
+            D
+          </div>
+
+          <div>
+            <h1>Dayflow</h1>
+            <span>Human Resource Management</span>
+          </div>
+
+        </div>
+
+        <div className="profile">
+
+          <div className="avatar">
+            {employee.name.charAt(0)}
+          </div>
+
+          <div>
+            <strong>{employee.name}</strong>
+            <small>{employee.role}</small>
+          </div>
+
+        </div>
+
+      </header>
+
+
+      {/* MAIN */}
+
+      <main className="dashboard">
+
+        {/* WELCOME */}
+
+        <section className="welcome">
+
+          <div>
+
+            <span className="eyebrow">
+              EMPLOYEE DASHBOARD
+            </span>
+
+            <h2>
+              Good morning, {employee.name.split(" ")[0]} 👋
+            </h2>
+
+            <p>
+              Let's see how your day is flowing.
+            </p>
+
+          </div>
+
+          <div className="status-badge">
+
+            <span className={
+              checkedIn ? "status-dot active" : "status-dot"
+            }></span>
+
+            {checkedIn ? "Currently Working" : "Not Checked In"}
+
+          </div>
+
+        </section>
+
+
+        {/* MESSAGE */}
+
+        {message && (
+
+          <div className="message">
+
+            {message}
+
+          </div>
+
+        )}
+
+
+        {/* CARDS */}
+
+        <section className="cards">
+
+          {/* ATTENDANCE */}
+
+          <div className="card attendance-card">
+
+            <div className="card-icon">
+              ⏱️
+            </div>
+
+            <span>Today's Attendance</span>
+
+            <h3>
+              {checkedIn
+                ? "Working"
+                : "Not Started"}
+            </h3>
+
+            <button
+              className={
+                checkedIn
+                  ? "checkout-button"
+                  : "checkin-button"
+              }
+              onClick={
+                checkedIn
+                  ? handleCheckOut
+                  : handleCheckIn
+              }
+            >
+
+              {checkedIn
+                ? "Check Out"
+                : "Check In"}
+
+            </button>
+
+          </div>
+
+
+          {/* LEAVE */}
+
+          <div className="card">
+
+            <div className="card-icon">
+              🌴
+            </div>
+
+            <span>Leave Balance</span>
+
+            <h3>
+              {leaveBalance}
+              <small> days</small>
+            </h3>
+
+            <p>
+              Available this year
+            </p>
+
+          </div>
+
+
+          {/* WORK */}
+
+          <div className="card">
+
+            <div className="card-icon">
+              💻
+            </div>
+
+            <span>Working Hours</span>
+
+            <h3>
+              {checkedIn
+                ? "Running"
+                : "0h 00m"}
+            </h3>
+
+            <p>
+              Today's total
+            </p>
+
+          </div>
+
+        </section>
+
+
+        {/* DAYFLOW */}
+
+        <section className="flow-section">
+
+          <div className="section-heading">
+
+            <div>
+
+              <span className="eyebrow">
+                YOUR DAY
+              </span>
+
+              <h2>
+                Your Dayflow 🌊
+              </h2>
+
+            </div>
+
+            <span>
+              Live
+            </span>
+
+          </div>
+
+
+          <div className="timeline">
+
+            <div className="timeline-line"></div>
+
+
+            {/* START */}
+
+            <div className="timeline-item active">
+
+              <div className="timeline-icon">
+                🌅
+              </div>
+
+              <div>
+                <strong>Start</strong>
+                <p>Begin your day</p>
+              </div>
+
+            </div>
+
+
+            {/* CHECK IN */}
+
+            <div className={
+              checkedIn
+                ? "timeline-item active"
+                : "timeline-item"
+            }>
+
+              <div className="timeline-icon">
+                🟢
+              </div>
+
+              <div>
+                <strong>Check In</strong>
+                <p>
+                  {checkedIn
+                    ? "You're here!"
+                    : "Waiting for check-in"}
+                </p>
+              </div>
+
+            </div>
+
+
+            {/* WORK */}
+
+            <div className={
+              checkedIn
+                ? "timeline-item active"
+                : "timeline-item"
+            }>
+
+              <div className="timeline-icon">
+                💻
+              </div>
+
+              <div>
+                <strong>Work</strong>
+                <p>
+                  {checkedIn
+                    ? "Dayflow is running"
+                    : "Not started"}
+                </p>
+              </div>
+
+            </div>
+
+
+            {/* CHECK OUT */}
+
+            <div className="timeline-item">
+
+              <div className="timeline-icon">
+                🌆
+              </div>
+
+              <div>
+                <strong>Check Out</strong>
+                <p>Complete your day</p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* DAYFLOW INSIGHT */}
+
+        <section className="insight">
+
+          <div className="insight-icon">
+            ✨
+          </div>
+
+          <div>
+
+            <span>
+              DAYFLOW INSIGHT
+            </span>
+
+            <h3>
+              {checkedIn
+                ? "Your day is flowing!"
+                : "Ready to start your day?"}
+            </h3>
+
+            <p>
+              {checkedIn
+                ? "Your attendance is active. Keep the momentum going."
+                : "Check in when you're ready and Dayflow will track your workday."
+              }
+            </p>
+
+          </div>
+
+        </section>
+
+      </main>
+
+    </div>
+  );
 }
 
-@keyframes slideDown {
-
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-}
-
-
-/* -----------------------------
-   RESPONSIVE
------------------------------ */
-
-@media (max-width: 800px) {
-
-  .header {
-    padding: 0 20px;
-  }
-
-  .dashboard {
-    padding: 30px 20px;
-  }
-
-  .cards {
-    grid-template-columns: 1fr;
-  }
-
-  .timeline {
-    grid-template-columns: 1fr;
-  }
-
-  .timeline-line {
-    display: none;
-  }
-
-  .welcome {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-  }
-
-}
+export default App;
